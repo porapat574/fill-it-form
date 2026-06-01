@@ -1,24 +1,16 @@
 """
-main.py — Flask API for PDF generation (Render.com)
+fill_it_form v4 — แก้วงเล็บและเส้นขอบหาย
+White-out จำกัดอยู่ระหว่างวงเล็บเท่านั้น
 """
 
 import io
-import os
-import base64
-from flask import Flask, request, jsonify
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-app = Flask(__name__)
-
-# ── Thai Font ──────────────────────────────────────────────────
-FONT_FILE = "THSarabun.ttf"  # หรือ Sarabun-Regular.ttf
-if os.path.exists(FONT_FILE):
-    pdfmetrics.registerFont(TTFont("Thai", FONT_FILE))
-else:
-    raise FileNotFoundError(f"ไม่พบ font file: {FONT_FILE}")
+FONT_FILE = "THSarabun.ttf"
+pdfmetrics.registerFont(TTFont("Thai", FONT_FILE))
 
 PAGE_W = 612.0
 PAGE_H = 792.0
@@ -26,46 +18,59 @@ BLUE   = (0.0, 0.0, 1.0)
 BLACK  = (0.0, 0.0, 0.0)
 WHITE  = (1.0, 1.0, 1.0)
 
-BLUE_REGIONS = {
-    "doc_no":           (441.7, 118, 536.3, 133),
-    "fullname_th":      (185.0, 137, 370.0, 152),
-    "date":             (420.0, 137, 536.3, 152),
-    "fullname_en":      (202.4, 171, 350.0, 186),
-    "emp_id":           (430.0, 171, 536.3, 186),
-    "workplace":        (183.4, 199, 536.3, 214),
-    "department":       (197.5, 226, 536.3, 241),
-    "position":         (183.4, 254, 536.3, 269),
-    "req_type":         (183.4, 281, 536.3, 296),
-    "program":          (197.5, 309, 536.3, 324),
-    "detail":           (183.2, 364, 536.3, 390),
-    "note":             (114.1, 505, 536.3, 530),
-    "sign_requester":   (142.4, 608, 240.0, 623),
-    "sign_date":        (155.9, 625, 220.0, 640),
-    "sign_approver":    (400.0, 607, 536.3, 622),
-    "sign_supervisor":  (127.8, 687, 310.0, 702),
-    "sign_recorder":    (385.0, 687, 536.3, 702),
+# ── พิกัด: x0=เริ่มข้อความ, top, x1=สิ้นสุดก่อนวงเล็บปิด, bottom ──
+# วงเล็บใน template: ( ... ) — white-out อยู่ระหว่างวงเล็บเท่านั้น
+FIELDS = {
+    # ── ข้อมูลทั่วไป ──────────────────────────────────────────
+    "doc_no":       (441.7, 118.0, 536.3, 133.0, 11, BLUE),
+    "fullname_th":  (185.0, 137.0, 370.0, 152.0, 11, BLUE),
+    "date":         (450.0, 137.0, 536.3, 152.0, 11, BLUE),
+    "fullname_en":  (202.4, 171.0, 350.0, 186.0, 11, BLUE),
+    "emp_id":       (450.0, 171.0, 536.3, 186.0, 11, BLUE),
+    "workplace":    (183.4, 199.0, 536.3, 214.0, 11, BLUE),
+    "department":   (197.5, 226.0, 536.3, 241.0, 11, BLUE),
+    "position":     (183.4, 254.0, 536.3, 269.0, 11, BLUE),
+    "req_type":     (183.4, 281.0, 536.3, 296.0, 11, BLUE),
+    "program":      (197.5, 309.0, 536.3, 324.0, 11, BLUE),
+    "detail":       (183.2, 364.0, 536.3, 382.0, 11, BLUE),
+    "detail2":      ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
+    "note":         (114.1, 505.0, 536.3, 523.0, 11, BLACK),
+
+    # ── ลายเซ็น — x0/x1 อยู่ระหว่างวงเล็บเท่านั้น ─────────────
+    # ( x0=122.5 → ข้อความเริ่ม 125.3 → ) x0=231.8
+    "sign_requester":  (126.0, 607.0, 231.0, 630.0, 11, BLACK),
+    "sign_date":       (126.0, 626.0, 231.0, 641.0, 10, BLACK),
+    # ( x0=383.6 → ข้อความเริ่ม 386.4 → ) x0=481.0
+    "sign_approver":   (387.0, 607.0, 480.0, 630.0, 11, BLACK),
+    # ( x0=120.4 → ข้อความเริ่ม 123.1 → ) x0=225.7
+    "sign_supervisor": (124.0, 688.0, 225.0, 710.0, 11, BLACK),
+    # ( x0=384.6 → ข้อความเริ่ม 387.4 → ) x0=483.1
+    "sign_recorder":   (388.0, 686.0, 482.0, 709.0, 11, BLACK),
 }
 
 def top_to_rl(top, font_size=11):
     return PAGE_H - top - font_size + 2
 
+
 def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     buf = io.BytesIO()
     c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
 
-    for field, (x0, top, x1, bot) in BLUE_REGIONS.items():
+    for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
+        value = str(data.get(field, "") or "")
+
+        # White-out เฉพาะพื้นที่ข้อความ — ไม่ครอบวงเล็บ
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
-        rl_y = PAGE_H - bot
-        c.rect(x0 - 1, rl_y, (x1 - x0) + 2, (bot - top) + 2, fill=1, stroke=0)
+        rl_bot = PAGE_H - bot
+        c.rect(x0, rl_bot, x1 - x0, bot - top, fill=1, stroke=0)
 
-        value = data.get(field, "")
         if not value:
             continue
 
-        c.setFillColorRGB(*BLACK if field.startswith("sign_") else BLUE)
-        c.setFont("Thai", 11)
-        c.drawString(x0, top_to_rl(top), str(value))
+        c.setFillColorRGB(*color)
+        c.setFont("Thai", fsize)
+        c.drawString(x0, top_to_rl(top, fsize), value)
 
     c.save()
     buf.seek(0)
@@ -82,31 +87,32 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     return out.getvalue()
 
 
-@app.route("/fill_it_form", methods=["POST"])
-def fill_it_form():
-    try:
-        body         = request.get_json(force=True)
-        data         = body.get("data", {})
-        template_b64 = body.get("template_b64", "")
-
-        if not template_b64:
-            return jsonify({"ok": False, "error": "ไม่มี template_b64"}), 400
-
-        template_bytes = base64.b64decode(template_b64)
-        pdf_bytes      = fill_pdf(data, template_bytes)
-        pdf_b64        = base64.b64encode(pdf_bytes).decode("utf-8")
-
-        return jsonify({"ok": True, "pdf_b64": pdf_b64})
-
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@app.route("/", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "service": "IT Form PDF Generator"})
-
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    with open("template.pdf", "rb") as f:
+        tmpl = f.read()
+
+    sample = {
+        "doc_no":           "IT-TEST-001",
+        "fullname_th":      "ปวรวรรณ สิทธิวุฒิ",
+        "date":             "1/6/2569",
+        "fullname_en":      "Paworawan Sittiwut",
+        "emp_id":           "SPCO23",
+        "workplace":        "S.P. Auto Corporation Co.,Ltd. (Head Office)",
+        "department":       "Accounting",
+        "position":         "ผู้จัดการแผนก",
+        "req_type":         "ขอใช้สิทธิ์ผู้ดูแลระบบ (Super User / Administrator)",
+        "program":          "AccCloud ระบบจัดการคำสั่งซื้อ และการบริการ",
+        "detail":           "กำหนดสิทธิ์การใช้งานพนักงานใหม่",
+        "detail2":          "",
+        "note":             "ภรภัทร ดวงแก้ว / SPCO41 / ขอเปิดสิทธิ์ SPCO SP SPM",
+        "sign_requester":   "ปวรวรรณ สิทธิวุฒิ",
+        "sign_date":        "1/6/2569",
+        "sign_approver":    "ภาณุ ธีรภานุ",
+        "sign_supervisor":  "กนกกาญจน คณารัตนดิลก",
+        "sign_recorder":    "ภรภัทร ดวงแก้ว",
+    }
+
+    result = fill_pdf(sample, tmpl)
+    with open("filled_v4.pdf", "wb") as f:
+        f.write(result)
+    print("✅ filled_v4.pdf")
