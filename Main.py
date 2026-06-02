@@ -1,6 +1,5 @@
 """
-fill_it_form v4 — แก้วงเล็บและเส้นขอบหาย
-White-out จำกัดอยู่ระหว่างวงเล็บเท่านั้น
+fill_it_form v5 — แก้วงเล็บหายโดย Redraw ( ) หลัง white-out
 """
 
 import io
@@ -18,10 +17,8 @@ BLUE   = (0.0, 0.0, 1.0)
 BLACK  = (0.0, 0.0, 0.0)
 WHITE  = (1.0, 1.0, 1.0)
 
-# ── พิกัด: x0=เริ่มข้อความ, top, x1=สิ้นสุดก่อนวงเล็บปิด, bottom ──
-# วงเล็บใน template: ( ... ) — white-out อยู่ระหว่างวงเล็บเท่านั้น
+# ── พิกัด text fields ────────────────────────────────────────
 FIELDS = {
-    # ── ข้อมูลทั่วไป ──────────────────────────────────────────
     "doc_no":       (441.7, 118.0, 536.3, 133.0, 11, BLUE),
     "fullname_th":  (185.0, 137.0, 370.0, 152.0, 11, BLUE),
     "date":         (450.0, 137.0, 536.3, 152.0, 11, BLUE),
@@ -36,17 +33,29 @@ FIELDS = {
     "detail2":      ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
     "note":         (114.1, 505.0, 536.3, 523.0, 11, BLACK),
 
-    # ── ลายเซ็น — x0/x1 อยู่ระหว่างวงเล็บเท่านั้น ─────────────
-    # ( x0=122.5 → ข้อความเริ่ม 125.3 → ) x0=231.8
-    "sign_requester":  (126.0, 607.0, 231.0, 630.0, 11, BLACK),
-    "sign_date":       (126.0, 626.0, 231.0, 641.0, 10, BLACK),
-    # ( x0=383.6 → ข้อความเริ่ม 386.4 → ) x0=481.0
-    "sign_approver":   (387.0, 607.0, 480.0, 630.0, 11, BLACK),
-    # ( x0=120.4 → ข้อความเริ่ม 123.1 → ) x0=225.7
-    "sign_supervisor": (124.0, 688.0, 225.0, 710.0, 11, BLACK),
-    # ( x0=384.6 → ข้อความเริ่ม 387.4 → ) x0=483.1
-    "sign_recorder":   (388.0, 686.0, 482.0, 709.0, 11, BLACK),
+    # ── ลายเซ็น: white-out เต็มพื้นที่ระหว่าง ( ) ──────────────
+    # white-out ครอบ ) ได้ เพราะจะ redraw ) ทีหลัง
+    "sign_requester":  (122.5, 607.0, 234.6, 632.0, 11, BLACK),
+    "sign_date":       (126.0, 626.0, 234.0, 641.0, 10, BLACK),
+    "sign_approver":   (383.6, 607.0, 483.8, 632.0, 11, BLACK),
+    "sign_supervisor": (120.4, 687.0, 228.5, 712.0, 11, BLACK),
+    "sign_recorder":   (384.6, 685.0, 485.9, 710.0, 11, BLACK),
 }
+
+# ── พิกัดวงเล็บทั้งหมดในส่วนลายเซ็น (จากการวิเคราะห์ template) ──
+# จะ redraw หลัง white-out
+PARENS = [
+    # Row 1 (top=615)
+    ("(", 122.5, 615.0),
+    (")", 231.8, 615.0),
+    ("(", 383.6, 615.0),
+    (")", 481.0, 615.0),
+    # Row 2 (top=694-696)
+    ("(", 120.4, 696.0),
+    (")", 225.7, 696.0),
+    ("(", 384.6, 694.0),
+    (")", 483.1, 694.0),
+]
 
 def top_to_rl(top, font_size=11):
     return PAGE_H - top - font_size + 2
@@ -56,10 +65,10 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     buf = io.BytesIO()
     c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
 
+    # ── 1. White-out + เขียน text ───────────────────────────────
     for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
         value = str(data.get(field, "") or "")
 
-        # White-out เฉพาะพื้นที่ข้อความ — ไม่ครอบวงเล็บ
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
@@ -70,7 +79,13 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
-        c.drawString(x0, top_to_rl(top, fsize), value)
+        c.drawString(x0 + 3, top_to_rl(top, fsize), value)
+
+    # ── 2. Redraw วงเล็บทุกตัวในส่วนลายเซ็น ──────────────────────
+    c.setFillColorRGB(*BLACK)
+    c.setFont("Thai", 11)
+    for char, px, py in PARENS:
+        c.drawString(px, top_to_rl(py, 11), char)
 
     c.save()
     buf.seek(0)
@@ -113,6 +128,6 @@ if __name__ == "__main__":
     }
 
     result = fill_pdf(sample, tmpl)
-    with open("filled_v4.pdf", "wb") as f:
+    with open("filled_v5.pdf", "wb") as f:
         f.write(result)
-    print("✅ filled_v4.pdf")
+    print("✅ filled_v5.pdf")
