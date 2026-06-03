@@ -1,5 +1,5 @@
 """
-fill_it_form v5 — แก้วงเล็บหายโดย Redraw ( ) หลัง white-out
+fill_it_form v6 — แก้ white overlay ทับ border doc_no และวงเล็บลายเซ็น
 """
 
 import io
@@ -20,7 +20,7 @@ WHITE  = (1.0, 1.0, 1.0)
 # ── พิกัด text fields ────────────────────────────────────────
 FIELDS = {
     "doc_no":       (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":  (185.0, 137.0, 370.0, 152.0, 11, BLUE),
+    "fullname_th":  (185.0, 137.0, 368.0, 152.0, 11, BLUE),   # x1: 370→368 หยุดก่อน border doc_no
     "date":         (450.0, 137.0, 536.3, 152.0, 11, BLUE),
     "fullname_en":  (202.4, 171.0, 350.0, 186.0, 11, BLUE),
     "emp_id":       (450.0, 171.0, 536.3, 186.0, 11, BLUE),
@@ -33,29 +33,14 @@ FIELDS = {
     "detail2":      ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
     "note":         (114.1, 505.0, 536.3, 523.0, 11, BLACK),
 
-    # ── ลายเซ็น: white-out เต็มพื้นที่ระหว่าง ( ) ──────────────
-    # white-out ครอบ ) ได้ เพราะจะ redraw ) ทีหลัง
-    "sign_requester":  (122.5, 607.0, 234.6, 632.0, 11, BLACK),
-    "sign_date":       (126.0, 626.0, 234.0, 641.0, 10, BLACK),
-    "sign_approver":   (383.6, 607.0, 483.8, 632.0, 11, BLACK),
-    "sign_supervisor": (120.4, 687.0, 228.5, 712.0, 11, BLACK),
-    "sign_recorder":   (384.6, 685.0, 485.9, 710.0, 11, BLACK),
+    # x0 เลื่อนพ้น '('  /  x1 หยุดก่อน ')' → ไม่ทับวงเล็บในแม่แบบ
+    "sign_requester":  (128.0, 607.0, 231.0, 632.0, 11, BLACK),
+    "sign_date":       (126.0, 626.0, 231.0, 641.0, 10, BLACK),
+    "sign_approver":   (389.0, 607.0, 480.0, 632.0, 11, BLACK),
+    "sign_supervisor": (126.0, 687.0, 225.0, 712.0, 11, BLACK),
+    "sign_recorder":   (390.0, 685.0, 482.0, 710.0, 11, BLACK),
 }
 
-# ── พิกัดวงเล็บทั้งหมดในส่วนลายเซ็น (จากการวิเคราะห์ template) ──
-# จะ redraw หลัง white-out
-PARENS = [
-    # Row 1 (top=615)
-    ("(", 122.5, 615.0),
-    (")", 231.8, 615.0),
-    ("(", 383.6, 615.0),
-    (")", 481.0, 615.0),
-    # Row 2 (top=694-696)
-    ("(", 120.4, 696.0),
-    (")", 225.7, 696.0),
-    ("(", 384.6, 694.0),
-    (")", 483.1, 694.0),
-]
 
 def top_to_rl(top, font_size=11):
     return PAGE_H - top - font_size + 2
@@ -65,7 +50,7 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     buf = io.BytesIO()
     c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
 
-    # ── 1. White-out + เขียน text ───────────────────────────────
+    # ── White-out + เขียน text ──────────────────────────────────
     for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
         value = str(data.get(field, "") or "")
 
@@ -80,12 +65,6 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
         c.drawString(x0 + 3, top_to_rl(top, fsize), value)
-
-    # ── 2. Redraw วงเล็บทุกตัวในส่วนลายเซ็น ──────────────────────
-    c.setFillColorRGB(*BLACK)
-    c.setFont("Thai", 11)
-    for char, px, py in PARENS:
-        c.drawString(px, top_to_rl(py, 11), char)
 
     c.save()
     buf.seek(0)
@@ -128,6 +107,6 @@ if __name__ == "__main__":
     }
 
     result = fill_pdf(sample, tmpl)
-    with open("filled_v5.pdf", "wb") as f:
+    with open("filled_v6.pdf", "wb") as f:
         f.write(result)
-    print("✅ filled_v5.pdf")
+    print("✅ filled_v6.pdf")
