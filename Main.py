@@ -1,5 +1,5 @@
 """
-fill_it_form v6 — แก้ white overlay ทับ border doc_no และวงเล็บลายเซ็น
+fill_it_form v7 — white-out sign fields ทั้งหมด แล้ว draw ( ชื่อ ) แทน
 """
 
 import io
@@ -17,29 +17,29 @@ BLUE   = (0.0, 0.0, 1.0)
 BLACK  = (0.0, 0.0, 0.0)
 WHITE  = (1.0, 1.0, 1.0)
 
-# ── พิกัด text fields ────────────────────────────────────────
 FIELDS = {
-    "doc_no":       (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":  (185.0, 137.0, 368.0, 152.0, 11, BLUE),   # x1: 370→368 หยุดก่อน border doc_no
-    "date":         (450.0, 137.0, 536.3, 152.0, 11, BLUE),
-    "fullname_en":  (202.4, 171.0, 350.0, 186.0, 11, BLUE),
-    "emp_id":       (450.0, 171.0, 536.3, 186.0, 11, BLUE),
-    "workplace":    (183.4, 199.0, 536.3, 214.0, 11, BLUE),
-    "department":   (197.5, 226.0, 536.3, 241.0, 11, BLUE),
-    "position":     (183.4, 254.0, 536.3, 269.0, 11, BLUE),
-    "req_type":     (183.4, 281.0, 536.3, 296.0, 11, BLUE),
-    "program":      (197.5, 309.0, 536.3, 324.0, 11, BLUE),
-    "detail":       (183.2, 364.0, 536.3, 382.0, 11, BLUE),
-    "detail2":      ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
-    "note":         (114.1, 505.0, 536.3, 523.0, 11, BLACK),
-
-    # x0 เลื่อนพ้น '('  /  x1 หยุดก่อน ')' → ไม่ทับวงเล็บในแม่แบบ
-    "sign_requester":  (128.0, 607.0, 231.0, 632.0, 11, BLACK),
-    "sign_date":       (126.0, 626.0, 231.0, 641.0, 10, BLACK),
-    "sign_approver":   (389.0, 607.0, 480.0, 632.0, 11, BLACK),
-    "sign_supervisor": (126.0, 687.0, 225.0, 712.0, 11, BLACK),
-    "sign_recorder":   (390.0, 685.0, 482.0, 710.0, 11, BLACK),
+    "doc_no":          (441.7, 118.0, 536.3, 133.0, 11, BLUE),
+    "fullname_th":     (185.0, 137.0, 368.0, 152.0, 11, BLUE),
+    "date":            (450.0, 137.0, 536.3, 152.0, 11, BLUE),
+    "fullname_en":     (202.4, 171.0, 350.0, 186.0, 11, BLUE),
+    "emp_id":          (450.0, 171.0, 536.3, 186.0, 11, BLUE),
+    "workplace":       (183.4, 199.0, 536.3, 214.0, 11, BLUE),
+    "department":      (197.5, 226.0, 536.3, 241.0, 11, BLUE),
+    "position":        (183.4, 254.0, 536.3, 269.0, 11, BLUE),
+    "req_type":        (183.4, 281.0, 536.3, 296.0, 11, BLUE),
+    "program":         (197.5, 309.0, 536.3, 324.0, 11, BLUE),
+    "detail":          (183.2, 364.0, 536.3, 382.0, 11, BLUE),
+    "detail2":         ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
+    "note":            (114.1, 505.0, 536.3, 523.0, 11, BLACK),
+    "sign_requester":  (122.5, 607.0, 234.6, 632.0, 11, BLACK),
+    "sign_date":       (126.0, 626.0, 234.0, 641.0, 10, BLACK),
+    "sign_approver":   (383.6, 607.0, 483.8, 632.0, 11, BLACK),
+    "sign_supervisor": (120.4, 687.0, 228.5, 712.0, 11, BLACK),
+    "sign_recorder":   (384.6, 685.0, 485.9, 710.0, 11, BLACK),
 }
+
+# fields ที่ต้อง wrap ด้วย ( )
+SIGN_NAME_FIELDS = {"sign_requester", "sign_approver", "sign_supervisor", "sign_recorder"}
 
 
 def top_to_rl(top, font_size=11):
@@ -47,13 +47,16 @@ def top_to_rl(top, font_size=11):
 
 
 def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
+    data = dict(data)
+    data["sign_approver"] = data.get("sign_approver") or "ภาณุ ธีรภานุ"
+
     buf = io.BytesIO()
     c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
 
-    # ── White-out + เขียน text ──────────────────────────────────
     for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
         value = str(data.get(field, "") or "")
 
+        # white-out
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
@@ -61,6 +64,10 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
 
         if not value:
             continue
+
+        # wrap bracket สำหรับ sign name fields
+        if field in SIGN_NAME_FIELDS:
+            value = f"( {value} )"
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
@@ -86,27 +93,27 @@ if __name__ == "__main__":
         tmpl = f.read()
 
     sample = {
-        "doc_no":           "IT-TEST-001",
-        "fullname_th":      "ปวรวรรณ สิทธิวุฒิ",
-        "date":             "1/6/2569",
-        "fullname_en":      "Paworawan Sittiwut",
-        "emp_id":           "SPCO23",
-        "workplace":        "S.P. Auto Corporation Co.,Ltd. (Head Office)",
-        "department":       "Accounting",
-        "position":         "ผู้จัดการแผนก",
-        "req_type":         "ขอใช้สิทธิ์ผู้ดูแลระบบ (Super User / Administrator)",
-        "program":          "AccCloud ระบบจัดการคำสั่งซื้อ และการบริการ",
-        "detail":           "กำหนดสิทธิ์การใช้งานพนักงานใหม่",
-        "detail2":          "",
-        "note":             "ภรภัทร ดวงแก้ว / SPCO41 / ขอเปิดสิทธิ์ SPCO SP SPM",
-        "sign_requester":   "ปวรวรรณ สิทธิวุฒิ",
-        "sign_date":        "1/6/2569",
-        "sign_approver":    "ภาณุ ธีรภานุ",
-        "sign_supervisor":  "กนกกาญจน คณารัตนดิลก",
-        "sign_recorder":    "ภรภัทร ดวงแก้ว",
+        "doc_no":          "IT-TEST-001",
+        "fullname_th":     "ปวรวรรณ สิทธิวุฒิ",
+        "date":            "1/6/2569",
+        "fullname_en":     "Paworawan Sittiwut",
+        "emp_id":          "SPCO23",
+        "workplace":       "S.P. Auto Corporation Co.,Ltd. (Head Office)",
+        "department":      "Accounting",
+        "position":        "ผู้จัดการแผนก",
+        "req_type":        "ขอใช้สิทธิ์ผู้ดูแลระบบ (Super User / Administrator)",
+        "program":         "AccCloud ระบบจัดการคำสั่งซื้อ และการบริการ",
+        "detail":          "กำหนดสิทธิ์การใช้งานพนักงานใหม่",
+        "detail2":         "",
+        "note":            "ภรภัทร ดวงแก้ว / SPCO41 / ขอเปิดสิทธิ์ SPCO SP SPM",
+        "sign_requester":  "ปวรวรรณ สิทธิวุฒิ",
+        "sign_date":       "1/6/2569",
+        "sign_approver":   "",
+        "sign_supervisor": "กนกกาญจน คณารัตนดิลก",
+        "sign_recorder":   "ภรภัทร ดวงแก้ว",
     }
 
     result = fill_pdf(sample, tmpl)
-    with open("filled_v6.pdf", "wb") as f:
+    with open("filled_v7.pdf", "wb") as f:
         f.write(result)
-    print("✅ filled_v6.pdf")
+    print("✅ filled_v7.pdf")
