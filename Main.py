@@ -1,8 +1,10 @@
 """
-fill_it_form v7 — white-out sign fields ทั้งหมด แล้ว draw ( ชื่อ ) แทน
+fill_it_form v8 — ไม่ white-out วงเล็บ template, แก้ fullname_th border
 """
 
 import io
+import base64
+from flask import Flask, request, jsonify
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -13,13 +15,14 @@ pdfmetrics.registerFont(TTFont("Thai", FONT_FILE))
 
 PAGE_W = 612.0
 PAGE_H = 792.0
-BLUE   = (0.0, 0.0, 1.0)
-BLACK  = (0.0, 0.0, 0.0)
-WHITE  = (1.0, 1.0, 1.0)
+BLUE  = (0.0, 0.0, 1.0)
+BLACK = (0.0, 0.0, 0.0)
+WHITE = (1.0, 1.0, 1.0)
 
 FIELDS = {
     "doc_no":          (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":     (185.0, 137.0, 368.0, 152.0, 11, BLUE),
+    # top 137→140, bot 152→149 — หลีกเส้น border แนวนอน
+    "fullname_th":     (185.0, 140.0, 368.0, 149.0, 11, BLUE),
     "date":            (450.0, 137.0, 536.3, 152.0, 11, BLUE),
     "fullname_en":     (202.4, 171.0, 350.0, 186.0, 11, BLUE),
     "emp_id":          (450.0, 171.0, 536.3, 186.0, 11, BLUE),
@@ -31,15 +34,16 @@ FIELDS = {
     "detail":          (183.2, 364.0, 536.3, 382.0, 11, BLUE),
     "detail2":         ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
     "note":            (114.1, 505.0, 536.3, 523.0, 11, BLACK),
-    "sign_requester":  (122.5, 607.0, 234.6, 632.0, 11, BLACK),
-    "sign_date":       (126.0, 626.0, 234.0, 641.0, 10, BLACK),
-    "sign_approver":   (383.6, 607.0, 483.8, 632.0, 11, BLACK),
-    "sign_supervisor": (120.4, 687.0, 228.5, 712.0, 11, BLACK),
-    "sign_recorder":   (384.6, 685.0, 485.9, 710.0, 11, BLACK),
-}
 
-# fields ที่ต้อง wrap ด้วย ( )
-SIGN_NAME_FIELDS = {"sign_requester", "sign_approver", "sign_supervisor", "sign_recorder"}
+    # x0 เลื่อน +12px พ้น '('  /  x1 ถอย -8px ก่อน ')'
+    # '(' positions: 122.5, 383.6, 120.4, 384.6
+    # ')' positions: 231.8, 481.0, 225.7, 483.1
+    "sign_requester":  (134.0, 609.0, 223.0, 626.0, 11, BLACK),
+    "sign_date":       (134.0, 626.0, 223.0, 640.0, 10, BLACK),
+    "sign_approver":   (395.0, 609.0, 473.0, 626.0, 11, BLACK),
+    "sign_supervisor": (132.0, 689.0, 217.0, 706.0, 11, BLACK),
+    "sign_recorder":   (396.0, 687.0, 475.0, 704.0, 11, BLACK),
+}
 
 
 def top_to_rl(top, font_size=11):
@@ -56,7 +60,7 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
         value = str(data.get(field, "") or "")
 
-        # white-out
+        # white-out เฉพาะพื้นที่ข้อความ ไม่แตะวงเล็บ
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
@@ -64,10 +68,6 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
 
         if not value:
             continue
-
-        # wrap bracket สำหรับ sign name fields
-        if field in SIGN_NAME_FIELDS:
-            value = f"( {value} )"
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
@@ -86,6 +86,25 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
     out = io.BytesIO()
     writer.write(out)
     return out.getvalue()
+
+
+# ── Flask ────────────────────────────────────────────────────
+app = Flask(__name__)
+
+@app.route("/fill_it_form", methods=["POST"])
+def handle_fill_it_form():
+    try:
+        body           = request.get_json(force=True)
+        data           = body["data"]
+        template_bytes = base64.b64decode(body["template_b64"])
+        pdf_bytes      = fill_pdf(data, template_bytes)
+        return jsonify({"ok": True, "pdf_b64": base64.b64encode(pdf_bytes).decode()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/", methods=["GET"])
+def health():
+    return "ok", 200
 
 
 if __name__ == "__main__":
@@ -114,6 +133,6 @@ if __name__ == "__main__":
     }
 
     result = fill_pdf(sample, tmpl)
-    with open("filled_v7.pdf", "wb") as f:
+    with open("filled_v8.pdf", "wb") as f:
         f.write(result)
-    print("✅ filled_v7.pdf")
+    print("✅ filled_v8.pdf")
