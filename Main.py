@@ -1,5 +1,5 @@
 """
-fill_it_form v8.1
+fill_it_form v8.2
 """
 
 import io
@@ -58,14 +58,16 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
-        c.rect(x0, rl_bot, x1 - x0, bot - top, fill=1, stroke=0)
+        # ✅ FIX 1: ลด height 2pt — ป้องกัน white rect ทับ border ด้านล่าง
+        c.rect(x0, rl_bot, x1 - x0, bot - top - 2, fill=1, stroke=0)
 
         if not value:
             continue
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
-        c.drawString(x0 + 3, top_to_rl(top, fsize), value)
+        # ✅ FIX 2: ลด left padding 3→1
+        c.drawString(x0 + 1, top_to_rl(top, fsize), value)
 
     c.save()
     buf.seek(0)
