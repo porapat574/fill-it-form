@@ -1,5 +1,5 @@
 """
-fill_it_form v8.5
+fill_it_form v8.6
 """
 
 import io
@@ -21,7 +21,7 @@ WHITE = (1.0, 1.0, 1.0)
 
 FIELDS = {
     "doc_no":          (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":     (160.0, 133.0, 368.0, 152.0, 11, BLUE),
+    "fullname_th":     (160.0, 135.0, 368.0, 152.0, 11, BLUE),   # top 133→135: keeps rect below row-sep at pdfY=133.8
     "date":            (450.0, 137.0, 536.3, 152.0, 11, BLUE),
     "fullname_en":     (202.4, 171.0, 350.0, 186.0, 11, BLUE),
     "emp_id":          (450.0, 171.0, 536.3, 186.0, 11, BLUE),
@@ -30,13 +30,13 @@ FIELDS = {
     "position":        (183.4, 254.0, 536.3, 269.0, 11, BLUE),
     "req_type":        (183.4, 281.0, 536.3, 296.0, 11, BLUE),
     "program":         (197.5, 309.0, 536.3, 324.0, 11, BLUE),
-    "detail":          (183.2, 364.0, 536.3, 375.0, 11, BLUE),   # bot: 382→375 (first dashed line at pdfY=375.8)
-    "detail2":         ( 57.0, 376.0, 536.3, 393.0, 11, BLUE),   # top: 382→376, bot: 400→393 (second dashed at pdfY=393.5)
-    "note":            (114.1, 505.0, 536.3, 516.0, 11, BLACK),  # bot: 523→516 (first dashed at pdfY=516.2)
-    "sign_requester":  (134.0, 609.0, 223.0, 626.0, 11, BLACK),
-    "sign_date":       (134.0, 626.0, 223.0, 640.0, 10, BLACK),
-    "sign_approver":   (395.0, 609.0, 473.0, 626.0, 11, BLACK),
-    "sign_supervisor": (132.0, 689.0, 217.0, 706.0, 11, BLACK),
+    "detail":          (183.2, 364.0, 536.3, 375.0, 11, BLUE),   # bot: 382→375 (dashed at pdfY=375.8)
+    "detail2":         ( 57.0, 376.0, 536.3, 393.0, 11, BLUE),   # top: 382→376, bot: 400→393 (dashed at pdfY=393.5)
+    "note":            (114.1, 505.0, 536.3, 516.0, 11, BLACK),  # bot: 523→516 (dashed at pdfY=516.2)
+    "sign_requester":  (134.0, 607.0, 223.0, 626.0, 11, BLACK),  # top 609→607: old text at pdfY=607.7
+    "sign_date":       (134.0, 623.0, 223.0, 640.0, 10, BLACK),  # top 626→623: old date at pdfY=624.7
+    "sign_approver":   (395.0, 607.0, 473.0, 626.0, 11, BLACK),  # top 609→607: old text at pdfY=607.0
+    "sign_supervisor": (132.0, 687.0, 217.0, 706.0, 11, BLACK),  # top 689→687: old text at pdfY=687.5
     "sign_recorder":   (396.0, 687.0, 475.0, 704.0, 11, BLACK),
 }
 
@@ -68,8 +68,8 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
-        # เว้น 1pt ล่าง (bottom underline) และ 2pt บน (top border)
-        c.rect(x0, rl_bot + 1, x1 - x0, bot - top - 3, fill=1, stroke=0)
+        # เว้น 1pt ล่าง (bottom underline); rect extends to rl_top+1 to erase pre-filled template text
+        c.rect(x0, rl_bot + 1, x1 - x0, bot - top, fill=1, stroke=0)
 
         if not value:
             continue
@@ -108,4 +108,4 @@ def handle_fill_it_form():
 
 @app.route("/", methods=["GET"])
 def health():
-    return "ok v8.5", 200
+    return "ok v8.6", 200
