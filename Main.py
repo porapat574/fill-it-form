@@ -1,5 +1,5 @@
 """
-fill_it_form v8.3
+fill_it_form v8.4
 """
 
 import io
@@ -21,7 +21,7 @@ WHITE = (1.0, 1.0, 1.0)
 
 FIELDS = {
     "doc_no":          (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":     (160.0, 143.0, 368.0, 152.0, 11, BLUE),
+    "fullname_th":     (160.0, 133.0, 368.0, 152.0, 11, BLUE),
     "date":            (450.0, 137.0, 536.3, 152.0, 11, BLUE),
     "fullname_en":     (202.4, 171.0, 350.0, 186.0, 11, BLUE),
     "emp_id":          (450.0, 171.0, 536.3, 186.0, 11, BLUE),
@@ -42,12 +42,17 @@ FIELDS = {
 
 
 def calc_text_y(top, bot, fsize):
-    """Vertically center text inside field. Keeps descenders off the bottom underline."""
-    field_h = bot - top
-    rl_bot  = PAGE_H - bot
-    # visual center: ascender ~70% above baseline, descender ~30% below
-    # → baseline = midpoint - fsize*0.3
-    return rl_bot + field_h / 2 - fsize * 0.3
+    """Center text vertically in field, guaranteeing descenders never touch the underline.
+
+    For narrow fields (field_h < fsize) the minimum-clearance floor kicks in,
+    so text floats slightly above the underline regardless of field height.
+    """
+    field_h   = bot - top
+    rl_bot    = PAGE_H - bot
+    descender = fsize * 0.2          # estimated descender depth
+    centered  = rl_bot + (field_h - fsize) / 2 + descender   # visually centered
+    min_y     = rl_bot + descender + 2                         # ≥ 2pt clearance floor
+    return max(centered, min_y)
 
 
 def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
