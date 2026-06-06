@@ -108,4 +108,4 @@ def handle_fill_it_form():
 
 @app.route("/", methods=["GET"])
 def health():
-    return "ok", 200
+    return "ok v8.5", 200
