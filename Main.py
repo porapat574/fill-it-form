@@ -1,5 +1,5 @@
 """
-fill_it_form v8.4
+fill_it_form v8.5
 """
 
 import io
@@ -30,9 +30,9 @@ FIELDS = {
     "position":        (183.4, 254.0, 536.3, 269.0, 11, BLUE),
     "req_type":        (183.4, 281.0, 536.3, 296.0, 11, BLUE),
     "program":         (197.5, 309.0, 536.3, 324.0, 11, BLUE),
-    "detail":          (183.2, 364.0, 536.3, 382.0, 11, BLUE),
-    "detail2":         ( 57.0, 382.0, 536.3, 400.0, 11, BLUE),
-    "note":            (114.1, 505.0, 536.3, 523.0, 11, BLACK),
+    "detail":          (183.2, 364.0, 536.3, 375.0, 11, BLUE),   # bot: 382→375 (first dashed line at pdfY=375.8)
+    "detail2":         ( 57.0, 376.0, 536.3, 393.0, 11, BLUE),   # top: 382→376, bot: 400→393 (second dashed at pdfY=393.5)
+    "note":            (114.1, 505.0, 536.3, 516.0, 11, BLACK),  # bot: 523→516 (first dashed at pdfY=516.2)
     "sign_requester":  (134.0, 609.0, 223.0, 626.0, 11, BLACK),
     "sign_date":       (134.0, 626.0, 223.0, 640.0, 10, BLACK),
     "sign_approver":   (395.0, 609.0, 473.0, 626.0, 11, BLACK),
@@ -49,9 +49,9 @@ def calc_text_y(top, bot, fsize):
     """
     field_h   = bot - top
     rl_bot    = PAGE_H - bot
-    descender = fsize * 0.2          # estimated descender depth
-    centered  = rl_bot + (field_h - fsize) / 2 + descender   # visually centered
-    min_y     = rl_bot + descender + 2                         # ≥ 2pt clearance floor
+    descent   = fsize * (2.75 / 11)  # THSarabun actual descent (measured)
+    centered  = rl_bot + (field_h - fsize) / 2 + descent   # visually centered
+    min_y     = rl_bot + descent + 2                         # ≥ 2pt clearance from bottom
     return max(centered, min_y)
 
 
