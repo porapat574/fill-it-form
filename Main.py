@@ -1,5 +1,5 @@
 """
-fill_it_form v8.2
+fill_it_form v8.3
 """
 
 import io
@@ -41,8 +41,13 @@ FIELDS = {
 }
 
 
-def top_to_rl(top, font_size=11):
-    return PAGE_H - top - font_size + 2
+def calc_text_y(top, bot, fsize):
+    """Vertically center text inside field. Keeps descenders off the bottom underline."""
+    field_h = bot - top
+    rl_bot  = PAGE_H - bot
+    # visual center: ascender ~70% above baseline, descender ~30% below
+    # → baseline = midpoint - fsize*0.3
+    return rl_bot + field_h / 2 - fsize * 0.3
 
 
 def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
@@ -58,16 +63,15 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
         rl_bot = PAGE_H - bot
-        # ✅ FIX 1: ลด height 2pt — ป้องกัน white rect ทับ border ด้านล่าง
-        c.rect(x0, rl_bot, x1 - x0, bot - top - 2, fill=1, stroke=0)
+        # เว้น 1pt ล่าง (bottom underline) และ 2pt บน (top border)
+        c.rect(x0, rl_bot + 1, x1 - x0, bot - top - 3, fill=1, stroke=0)
 
         if not value:
             continue
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
-        # ✅ FIX 2: ลด left padding 3→1
-        c.drawString(x0 + 1, top_to_rl(top, fsize), value)
+        c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
 
     c.save()
     buf.seek(0)
