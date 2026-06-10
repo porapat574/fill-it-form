@@ -47,8 +47,8 @@ WRAP_FIELDS = {"note"}
 # Label overrides — draw white rect + new text to replace printed template labels
 # key: data key   value: (x0, top, x1, bot, fsize, color)
 LABEL_OVERRIDES = {
-    "label_requester": (235.0, 596.0, 325.0, 612.0,  9, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ
-    "label_recorder":  (484.0, 676.0, 540.0, 691.0,  9, BLACK),  # ทับ ผู้บันทึก/ควบคุม
+    "label_requester": (235.0, 587.0, 325.0, 612.0, 11, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ (top ขยายขึ้น 10pt คลุมสระ)
+    "label_recorder":  (484.0, 667.0, 540.0, 691.0, 11, BLACK),  # ทับ ผู้บันทึก/ควบคุม (top ขยายขึ้น 10pt)
 }
 
 
