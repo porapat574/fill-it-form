@@ -47,9 +47,12 @@ WRAP_FIELDS = {"note"}
 
 # Label overrides — draw white rect + new text to replace printed template labels
 # key: data key   value: (x0, top, x1, bot, fsize, color)
+# LABEL_OVERRIDES: (rect_x0, rect_top, rect_x1, rect_bot, txt_top, txt_bot, fsize, color)
+# rect_* = white rect ขยายขึ้นคลุม tone marks/vowels ของ label เดิม
+# txt_*  = ตำแหน่งจริงของ label เดิม (ใช้ calc_text_y → align ตรงแถว)
 LABEL_OVERRIDES = {
-    "label_requester": (232.0, 575.0, 328.0, 614.0, 11, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ
-    "label_recorder":  (481.0, 655.0, 542.0, 693.0, 11, BLACK),  # ทับ ผู้บันทึก/ควบคุม
+    "label_requester": (232.0, 575.0, 328.0, 614.0, 597.5, 610.4, 11, BLACK),
+    "label_recorder":  (481.0, 655.0, 542.0, 693.0, 677.0, 689.9, 11, BLACK),
 }
 LABEL_FONT = "CordiaNew"
 
@@ -114,17 +117,19 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
             c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
 
     # Label overrides — white rect + new label text (repair template only)
-    for field, (x0, top, x1, bot, fsize, color) in LABEL_OVERRIDES.items():
+    for field, (rx0, rtop, rx1, rbot, ttop, tbot, fsize, color) in LABEL_OVERRIDES.items():
         value = str(data.get(field, "") or "")
         if not value:
             continue
-        rl_bot = PAGE_H - bot
+        # white rect (ขยายขึ้นบนเพื่อคลุม tone marks ของ label เดิม)
+        rl_rbot = PAGE_H - rbot
         c.setFillColorRGB(*WHITE)
         c.setStrokeColorRGB(*WHITE)
-        c.rect(x0, rl_bot + 1, x1 - x0, bot - top, fill=1, stroke=0)
+        c.rect(rx0, rl_rbot + 1, rx1 - rx0, rbot - rtop, fill=1, stroke=0)
+        # text ที่ตำแหน่ง label เดิม → align ตรงแถวกับ label อื่น
         c.setFillColorRGB(*color)
         c.setFont(LABEL_FONT, fsize)
-        c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
+        c.drawString(rx0 + 1, calc_text_y(ttop, tbot, fsize), value)
 
     c.save()
     buf.seek(0)
