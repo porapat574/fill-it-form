@@ -12,6 +12,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 FONT_FILE = "THSarabun.ttf"
 pdfmetrics.registerFont(TTFont("Thai", FONT_FILE))
+pdfmetrics.registerFont(TTFont("CordiaNew", "cordia.ttc", subfontIndex=0))
 
 PAGE_W = 612.0
 PAGE_H = 792.0
@@ -47,9 +48,10 @@ WRAP_FIELDS = {"note"}
 # Label overrides — draw white rect + new text to replace printed template labels
 # key: data key   value: (x0, top, x1, bot, fsize, color)
 LABEL_OVERRIDES = {
-    "label_requester": (235.0, 587.0, 325.0, 612.0, 11, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ (top ขยายขึ้น 10pt คลุมสระ)
-    "label_recorder":  (484.0, 667.0, 540.0, 691.0, 11, BLACK),  # ทับ ผู้บันทึก/ควบคุม (top ขยายขึ้น 10pt)
+    "label_requester": (232.0, 575.0, 328.0, 614.0, 11, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ
+    "label_recorder":  (481.0, 655.0, 542.0, 693.0, 11, BLACK),  # ทับ ผู้บันทึก/ควบคุม
 }
+LABEL_FONT = "CordiaNew"
 
 
 def wrap_text(c, text, x0, x1, top, fsize):
@@ -121,7 +123,7 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         c.setStrokeColorRGB(*WHITE)
         c.rect(x0, rl_bot + 1, x1 - x0, bot - top, fill=1, stroke=0)
         c.setFillColorRGB(*color)
-        c.setFont("Thai", fsize)
+        c.setFont(LABEL_FONT, fsize)
         c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
 
     c.save()
