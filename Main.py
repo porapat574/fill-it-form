@@ -1,5 +1,5 @@
 """
-fill_it_form v8.6
+fill_it_form v8.8
 """
 
 import io
@@ -20,25 +20,53 @@ BLACK = (0.0, 0.0, 0.0)
 WHITE = (1.0, 1.0, 1.0)
 
 FIELDS = {
-    "doc_no":          (441.7, 118.0, 536.3, 133.0, 11, BLUE),
-    "fullname_th":     (160.0, 135.0, 368.0, 152.0, 11, BLUE),   # top 133→135: keeps rect below row-sep at pdfY=133.8
-    "date":            (450.0, 137.0, 536.3, 152.0, 11, BLUE),
-    "fullname_en":     (202.4, 171.0, 350.0, 186.0, 11, BLUE),
-    "emp_id":          (450.0, 171.0, 536.3, 186.0, 11, BLUE),
-    "workplace":       (183.4, 199.0, 536.3, 214.0, 11, BLUE),
-    "department":      (197.5, 226.0, 536.3, 241.0, 11, BLUE),
-    "position":        (183.4, 254.0, 536.3, 269.0, 11, BLUE),
-    "req_type":        (183.4, 281.0, 536.3, 296.0, 11, BLUE),
-    "program":         (197.5, 309.0, 536.3, 324.0, 11, BLUE),
-    "detail":          (183.2, 364.0, 536.3, 375.0, 11, BLUE),   # bot: 382→375 (dashed at pdfY=375.8)
-    "detail2":         ( 57.0, 376.0, 536.3, 393.0, 11, BLUE),   # top: 382→376, bot: 400→393 (dashed at pdfY=393.5)
-    "note":            (114.1, 505.0, 536.3, 516.0, 11, BLACK),  # bot: 523→516 (dashed at pdfY=516.2)
-    "sign_requester":  (134.0, 607.0, 223.0, 626.0, 11, BLACK),  # top 609→607: old text at pdfY=607.7
-    "sign_date":       (134.0, 623.0, 223.0, 640.0, 10, BLACK),  # top 626→623: old date at pdfY=624.7
-    "sign_approver":   (395.0, 607.0, 473.0, 626.0, 11, BLACK),  # top 609→607: old text at pdfY=607.0
-    "sign_supervisor": (132.0, 687.0, 217.0, 706.0, 11, BLACK),  # top 689→687: old text at pdfY=687.5
-    "sign_recorder":   (396.0, 687.0, 475.0, 704.0, 11, BLACK),
+    "doc_no":          (441.7, 118.0, 536.3, 133.0, 13, BLUE),
+    "fullname_th":     (160.0, 135.0, 368.0, 152.0, 13, BLUE),   # top 133→135: keeps rect below row-sep at pdfY=133.8
+    "date":            (450.0, 137.0, 536.3, 152.0, 13, BLUE),
+    "fullname_en":     (202.4, 171.0, 350.0, 186.0, 13, BLUE),
+    "emp_id":          (450.0, 171.0, 536.3, 186.0, 13, BLUE),
+    "workplace":       (183.4, 199.0, 536.3, 214.0, 13, BLUE),
+    "department":      (197.5, 226.0, 536.3, 241.0, 13, BLUE),
+    "position":        (183.4, 254.0, 536.3, 269.0, 13, BLUE),
+    "req_type":        (183.4, 281.0, 536.3, 296.0, 13, BLUE),
+    "program":         (197.5, 309.0, 536.3, 324.0, 13, BLUE),
+    "detail":          (183.2, 364.0, 536.3, 375.0, 13, BLUE),   # bot: 382→375 (dashed at pdfY=375.8)
+    "detail2":         ( 57.0, 376.0, 536.3, 393.0, 13, BLUE),   # top: 382→376, bot: 400→393 (dashed at pdfY=393.5)
+    "note":            (114.1, 505.0, 536.3, 572.0, 13, BLACK),  # bot expanded to 572 for multi-line wrap
+    "sign_requester":  (134.0, 607.0, 223.0, 626.0, 13, BLACK),  # top 609→607: old text at pdfY=607.7
+    "sign_date":       (134.0, 623.0, 223.0, 640.0, 12, BLACK),  # top 626→623: old date at pdfY=624.7
+    "sign_approver":   (395.0, 607.0, 473.0, 626.0, 13, BLACK),  # top 609→607: old text at pdfY=607.0
+    "sign_supervisor": (132.0, 687.0, 217.0, 706.0, 13, BLACK),  # top 689→687: old text at pdfY=687.5
+    "sign_recorder":   (396.0, 687.0, 475.0, 704.0, 13, BLACK),
 }
+
+
+WRAP_FIELDS = {"note"}
+
+
+def wrap_text(c, text, x0, x1, top, fsize):
+    """Draw word-wrapped text starting from top of field, wrapping downward."""
+    max_w   = x1 - x0 - 4
+    line_h  = fsize * 1.4
+    descent = fsize * (2.75 / 11)
+    words   = text.split()
+    lines   = []
+    cur     = ""
+    for w in words:
+        test = (cur + " " + w).strip() if cur else w
+        if c.stringWidth(test, "Thai", fsize) <= max_w:
+            cur = test
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+
+    rl_top = PAGE_H - top
+    for i, line in enumerate(lines):
+        y = rl_top - fsize + descent - i * line_h
+        c.drawString(x0 + 2, y, line)
 
 
 def calc_text_y(top, bot, fsize):
@@ -76,7 +104,10 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
 
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
-        c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
+        if field in WRAP_FIELDS:
+            wrap_text(c, value, x0, x1, top, fsize)
+        else:
+            c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
 
     c.save()
     buf.seek(0)
@@ -108,4 +139,4 @@ def handle_fill_it_form():
 
 @app.route("/", methods=["GET"])
 def health():
-    return "ok v8.6", 200
+    return "ok v8.8", 200
