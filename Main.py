@@ -1,5 +1,5 @@
 """
-fill_it_form v8.8
+fill_it_form v8.9
 """
 
 import io
@@ -92,16 +92,10 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
 
     for field, (x0, top, x1, bot, fsize, color) in FIELDS.items():
         value = str(data.get(field, "") or "")
-
-        c.setFillColorRGB(*WHITE)
-        c.setStrokeColorRGB(*WHITE)
-        rl_bot = PAGE_H - bot
-        # เว้น 1pt ล่าง (bottom underline); rect extends to rl_top+1 to erase pre-filled template text
-        c.rect(x0, rl_bot + 1, x1 - x0, bot - top, fill=1, stroke=0)
-
         if not value:
             continue
 
+        rl_bot = PAGE_H - bot
         c.setFillColorRGB(*color)
         c.setFont("Thai", fsize)
         if field in WRAP_FIELDS:
@@ -139,4 +133,4 @@ def handle_fill_it_form():
 
 @app.route("/", methods=["GET"])
 def health():
-    return "ok v8.8", 200
+    return "ok v8.9", 200
