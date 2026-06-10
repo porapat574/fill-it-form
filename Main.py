@@ -1,5 +1,5 @@
 """
-fill_it_form v8.9
+fill_it_form v9.0
 """
 
 import io
@@ -30,6 +30,7 @@ FIELDS = {
     "position":        (183.4, 254.0, 536.3, 269.0, 13, BLUE),
     "req_type":        (183.4, 281.0, 536.3, 296.0, 13, BLUE),
     "program":         (197.5, 309.0, 536.3, 324.0, 13, BLUE),
+    "asset_tag":       (183.0, 330.0, 536.3, 345.0, 13, BLUE),  # อีเมลที่ร้องขอ (email template only)
     "detail":          (183.2, 364.0, 536.3, 375.0, 13, BLUE),   # bot: 382→375 (dashed at pdfY=375.8)
     "detail2":         ( 57.0, 376.0, 536.3, 393.0, 13, BLUE),   # top: 382→376, bot: 400→393 (dashed at pdfY=393.5)
     "note":            (114.1, 505.0, 536.3, 572.0, 13, BLACK),  # bot expanded to 572 for multi-line wrap
@@ -42,6 +43,13 @@ FIELDS = {
 
 
 WRAP_FIELDS = {"note"}
+
+# Label overrides — draw white rect + new text to replace printed template labels
+# key: data key   value: (x0, top, x1, bot, fsize, color)
+LABEL_OVERRIDES = {
+    "label_requester": (235.0, 596.0, 325.0, 612.0,  9, BLACK),  # ทับ ผู้ขอใช้สิทธิ์/ผู้ดำเนินการ
+    "label_recorder":  (484.0, 676.0, 540.0, 691.0,  9, BLACK),  # ทับ ผู้บันทึก/ควบคุม
+}
 
 
 def wrap_text(c, text, x0, x1, top, fsize):
@@ -103,6 +111,19 @@ def fill_pdf(data: dict, template_bytes: bytes) -> bytes:
         else:
             c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
 
+    # Label overrides — white rect + new label text (repair template only)
+    for field, (x0, top, x1, bot, fsize, color) in LABEL_OVERRIDES.items():
+        value = str(data.get(field, "") or "")
+        if not value:
+            continue
+        rl_bot = PAGE_H - bot
+        c.setFillColorRGB(*WHITE)
+        c.setStrokeColorRGB(*WHITE)
+        c.rect(x0, rl_bot + 1, x1 - x0, bot - top, fill=1, stroke=0)
+        c.setFillColorRGB(*color)
+        c.setFont("Thai", fsize)
+        c.drawString(x0 + 1, calc_text_y(top, bot, fsize), value)
+
     c.save()
     buf.seek(0)
 
@@ -133,4 +154,4 @@ def handle_fill_it_form():
 
 @app.route("/", methods=["GET"])
 def health():
-    return "ok v8.9", 200
+    return "ok v9.0", 200
