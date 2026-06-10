@@ -51,8 +51,8 @@ WRAP_FIELDS = {"note"}
 # rect_* = white rect ขยายขึ้นคลุม tone marks/vowels ของ label เดิม
 # txt_*  = ตำแหน่งจริงของ label เดิม (ใช้ calc_text_y → align ตรงแถว)
 LABEL_OVERRIDES = {
-    "label_requester": (232.0, 575.0, 328.0, 614.0, 597.5, 610.4, 13, BLACK),
-    "label_recorder":  (481.0, 655.0, 542.0, 693.0, 677.0, 689.9, 13, BLACK),
+    "label_requester": (232.0, 575.0, 328.0, 614.0, 595.5, 608.4, 14, BLACK),
+    "label_recorder":  (481.0, 655.0, 542.0, 693.0, 675.0, 687.9, 14, BLACK),
 }
 LABEL_FONT = "CordiaNew"
 
